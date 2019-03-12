@@ -6,8 +6,8 @@ Scaling analyses have been performed on the proprietary mixed time and event dri
 The folder **DPSNN** contains the source files required to build the simulator and the DPSNN_script necessary to launch simulations.
 
 The folder **NEST** contains:
-	- the model of the neural network for a 48by48 grid of columns
-	- the files required to build the module implementing the custom neuron model used for simulations
-	- the files for specific connection kernel rules, not available in the standard NEST simulator
+- the model of the neural network for a 48by48 grid of columns
+- the files required to build the module implementing the custom neuron model used for simulations
+- the files for specific connection kernel rules, not available in the standard NEST simulator
 
 The folder **config** contains four set of configurations files that can be used to run simulations, both with DPSNN and NEST.
