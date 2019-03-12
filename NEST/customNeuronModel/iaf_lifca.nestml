@@ -1,0 +1,83 @@
+neuron iaf_lifca:
+
+  initial_values:
+    V_m mV = 15.mV
+    w nS = 0.nS
+  end
+
+  equations:
+    #V_m' = -(V_m - E_L)/Tau - g_w * w/C_m + (I_e + I_spikes + I_stim)/C_m
+    V_m' = -(V_m - E_L)/Tau - g_w * w/C_m + (I_e + I_spikes)/C_m
+    w'   = - w/tau_w
+  end
+
+  # these parameter are adjusted from outside
+  parameters:
+
+   V_th mV = 20.0mV       # Threshold Potential in mV
+   V_reset mV = 15.0mV    # Reset Potential in mV
+   E_L mV = 0.0mV         # Leak reversal Potential (aka resting potential) in mV
+   t_ref ms = 2.0ms       # Refractory period in ms
+   #C_m pF = 500.0pF      # Membrane Capacitance in pF
+   C_m pF = 1.0pF       	# Membrane Capacitance in pF
+   Tau ms = 20.0ms	# Membran time constant
+   tau_w ms = 1000.0ms    # Adaptative time constant
+   g_w mV = 0.02mV	# 
+   AlphaC nS = 1.0nS	# 
+   #alias g_w pA = 0.01*C_m	
+   #alias AlphaC nS = 1.0/C_m
+
+   ##g_w pA = 0.	 	#    
+   ##t_ref ms = 1.      	# Refractory period in ms
+   ##Tau ms = 10.       	# Membran time constant
+   ##tau_w ms = 100.    	# Adaptative time constant
+      
+   I_e pA = 0.0pA         # Constant Current in pA
+
+   # Input current injected by CurrentEvent.
+   # This variable is used to transport the current applied into the
+   # _dynamics function computing the derivative of the state vector.
+   #I_stim pA = 0.0
+   I_spikes pA = 0.0pA
+   
+  end
+
+  #function set_AlphaC(v nS):
+  #end
+  #function set_g_w(v pA):
+  #end
+
+  # helper calculations
+  internals:
+    RefractoryCounts integer = steps(t_ref)
+    r  integer
+  end
+
+  # input sources
+  input:
+    spikes nS  <- spike
+    #currents <- current
+  end
+
+  # output events
+  output: spike
+
+  # Describes how the state evolves in the time
+  update:
+    integrate_odes()
+    if r == 0: # not refractory
+        if V_m >= V_th: # threshold crossing
+          r = RefractoryCounts
+          V_m = V_reset
+	  w = w + AlphaC
+        emit_spike()
+    end
+    else:
+        r = r - 1
+	V_m = V_reset # clamp potential
+    end
+    #I_stim = currents.get_sum()
+    #I_spikes = spikes.get_sum()
+  end
+
+end
