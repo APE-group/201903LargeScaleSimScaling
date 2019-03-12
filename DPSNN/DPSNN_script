@@ -1,0 +1,387 @@
+# DPSNN (Distributed Plastic Spiking Neural Network, Simulation Engine)
+# DPSNN launch script -
+# AUTHOR: Pier Stanislao Paolucci (Italy, Roma, (2011-...)
+# AUTHOR: Elena Pastorelli (2013...)
+# AUTHOR: ....
+# AUTHOR: plus other members of INFN APE lab, Roma, Italy
+# set -x #use set -x to debug
+
+#SCRIPT COMMAND LINE PARAMETERS 
+export env_CFX=$1
+export env_CFY=$2
+export env_CFT=$(($env_CFX * $env_CFY))
+export env_globH=$3
+export env_hostList=$4
+export env_BTLs=$5
+export env_totalSimTime_ms=$6
+export env_netConfig=$7
+
+
+if [ "$env_netConfig" == "LIFCA" ] ; then
+  export DPSNNexecutable=./LIFCA-DPSNN.out
+  export env_minSynWeight_f=-1.0
+  
+  #env_overallConnectivity: possible values
+  #env_overallConnectivity=0 explicitStencil
+  #env_overallConnectivity=1 homogeneous
+  #env_overallConnectivity=2 To Be Implemented, homogeneous but loc inh 
+  export env_overallConnectivity=1
+
+  export env_stencilDim=8
+  
+  export env_D=80
+  export env_globalSeed=2
+  export env_synGen=2
+  export env_startPlasticity_ms=50000
+  export env_stopPlasticity_ms=120000
+  
+  export env_startModulations_ms=10000
+  export env_stopModulations_ms=120000
+  
+  # general range, can be restricted by specific params
+  export env_startStatFiles_s=0 
+  # export env_stopStatFiles_s=$(($env_totalSimTime_ms)/1000))
+  export env_stopStatFiles_s=120
+  
+  # modulo in seconds, general periodicity of statistic files printing
+  export env_moduloSec=1
+
+  #export env_howManyOutputFiles=0 # 0= three files; 1= one file/sec+global
+  export env_howManyOutputFiles=1
+
+  #export env_outputMessageTraffic="n" # n= no file management; y= file management: one file/sec+global
+  export env_manageOutputFiles="y"
+
+  #export env_ratesPerPopFiles=1	 # 1-> ratesPerPop Files managed by this script
+  export env_ratesPerPopFiles=1
+  
+  # instead writeDisable is about the production of files during sim
+  export env_statRatesPerPop_writeDisable=0
+  export env_startRatesPerPop_s=$env_startStatFiles_s
+  export env_stopRatesPerPop_s=$env_stopStatFiles_s
+  
+  export env_ratesSampling=5
+
+  # 1-> mai stampare gli spike files. 0 stampare!!!
+  export env_spikes_writeDisable=1
+  
+  #1-> files A,B ad iniz/ fine sec
+  export env_statSynPeriodicProbe_writeDisable=1
+
+  # specific, must be in range start-stopStatFiles
+  export env_startSynPeriodicProbe_s=120
+  export env_stopSynPeriodicProbe_s=122
+
+  #1-> mai stampare la lista di eventi STDP
+  export env_statSTDPevent_writeDisable=0
+  # specific, must be in range start-stopStatFiles
+  export env_startSTDPevent_s=121
+  export env_stopSTDPevent_s=121
+
+  export env_outputMessageTraffic="n"
+  export env_sortSynGenFiles="n"
+
+  export env_debugPrintEnable_ms=-1
+  export env_chrono=1
+  export env_startPartialChrono_ms=0
+  export env_partialChronoWindow_ms=$(($env_totalSimTime_ms - $env_startPartialChrono_ms)) 
+  export env_thalamicInput=3
+  export env_thalamicInputFreq=8
+
+  #env_collectivesAlgo values:
+  #standardMPI=0, unrolledMPI=1
+  export env_collectivesAlgo=0
+
+  #env_pkt_Length values:
+  #0-> old algo: A2AV(lengths) + A2AV(payload)
+  #1-> new algo: A2A(fixed length payload) + A2AV(remainder payload)
+  export env_pktLength=20
+
+elif [ "$env_netConfig" == "1kapenet" ] ; then
+#add parameters!!!!
+  export env_globalSeed=2
+  export DPSNNexecutable=./apenet-DPSNN.out
+  echo "selected executable" $DPSNNexecutable
+else
+  export DPSNNexecutable="Please Specify DPSNN Configuration"
+  echo "selected executable" $DPSNNexecutable
+fi
+ 
+echo $(date)
+echo "env_netConfig=" $env_netConfig
+
+#----------------------------------------------------------------------
+#BTLs: self,apelink or self,apelink,sm to run with mpi + apelink support
+#BTLs: apenet to run with standard mpi + RDMA communication on apenet+
+#BTLs: quong to run with standard mpi + infiniband
+
+# If the module is not yet loaded, please load it!!
+    #export PATH=/usr/lib64/openmpi/1.4-gcc/bin:/usr/local/cuda/bin:$PATH
+    #export LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib64/openmpi/1.4-gcc/lib
+
+
+if [ "$env_BTLs" == "self,apelink" ] || [ "$env_BTLs" == "self,sm,apelink" ] ; then
+    export APENET_HOME=$HOME/apelink/V4/apenet_plus/
+    #$APENET_HOME/software/apenet_env.sh
+    export MPI_HOME=/qst0/home1/homedirs/tosoratto/ompi-apenet-jul2013/local
+    export MPI_BIN=$MPI_HOME/bin
+    export MPI_LIB=$MPI_HOME/lib
+    export PATH=$MPI_BIN:$PATH
+    export LD_LIBRARY_PATH=$MPI_LIB:$APENET_HOME/lib:$LD_LIBRARY_PATH
+    export MPIRUN_CMD=$MPI_BIN/mpirun
+elif [ "$env_BTLs" == "apenet" ] ; then
+    export APENET_HOME=$HOME/apelink/V4/apenet_plus/
+    #export MPI_HOME=/usr/lib64/openmpi
+    export MPI_BIN=$MPI_HOME/bin
+    export MPI_LIB=$MPI_HOME/lib
+    export MPI_INCLUDE=/usr/include/openmpi-x86_64/
+    export MPIRUN_CMD=$MPI_BIN/mpirun
+    export env_BTLs="self,sm,openib"
+    export LD_LIBRARY_PATH=$MPI_LIB:$APENET_HOME/lib:$LD_LIBRARY_PATH
+elif  [ "$env_BTLs" == "self,sm,openib" ] || [ "$env_BTLs" == "self,sm" ] || [ "$env_BTLs" == "self,sm,tcp" ] || [ "$env_BTLs" == "self,vader,openib" ] || [ "$env_BTLs" == "self,vader" ] || [ "$env_BTLs" == "self,vader,tcp" ] ; then
+    export MPIRUN_CMD=mpirun
+    export APENET=""
+    export APENET_TOPO=""
+fi
+
+rm log-H$env_globH-C$env_CFT.log 2> /dev/null
+rm time-H$env_globH-C$env_CFT.time 2> /dev/null
+rm IstogramData* 2> /dev/null
+
+echo "script-DPSNN-..." > log-H$env_globH-C$env_CFT.log
+echo "total sim time          =" $env_totalSimTime_ms "ms" \
+     >> log-H$env_globH-C$env_CFT.log
+echo "startPlasticity         =" $env_startPlasticity_ms "ms" \
+     >> log-H$env_globH-C$env_CFT.log
+echo "stopPlasticity          =" $env_stopPlasticity_ms "ms" \
+     >> log-H$env_globH-C$env_CFT.log
+echo "net composed by        C=" $env_CFT " cortical modules (columns)" \
+     >> log-H$env_globH-C$env_CFT.log
+echo "distributed on         H=" $env_globH " processes" \
+     >> log-H$env_globH-C$env_CFT.log
+echo "will run on the hosts  L=" $env_hostList \
+     >> log-H$env_globH-C$env_CFT.log
+echo "using the MPI btls     B=" $env_BTLs \
+     >> log-H$env_globH-C$env_CFT.log
+echo "max delay              D=" $env_D "ms" \
+     >> log-H$env_globH-C$env_CFT.log
+echo "sorting of files Y/N   F=" $env_sortSynGenFiles \
+     >> log-H$env_globH-C$env_CFT.log
+echo "			executable    W=" $env_netConfig \
+     >> log-H$env_globH-C$env_CFT.log
+ 
+echo "timing START:" >> time-H$env_globH-C$env_CFT.time
+date >> time-H$env_globH-C$env_CFT.time
+
+set -x
+ /usr/bin/time $MPIRUN_CMD -np $env_globH \
+	-host $env_hostList \
+	-hostfile hostfile \
+	-map-by node \
+	-bind-to core:overload-allowed \
+	-mca btl $env_BTLs \
+	-mca btl_base_verbose 0 \
+	-mca coll_base_verbose 0 \
+	-mca pml_base_verbose 0 \
+	-mca orte_base_help_aggregate 0 \
+	-mca mpi_cuda_support 0 \
+	-mca btl_sm_use_cma 1 \
+	-x APENET_TOPO="$APENET_TOPO" \
+	-x LD_LIBRARY_PATH=$MPI_LIB:$APENET_HOME/lib:${LD_LIBRARY_PATH} \
+	-x PATH="$MPI_BIN:${PATH}"\
+	-x APENET="$APENET" \
+	-x env_CFX="$env_CFX"\
+	-x env_CFY="$env_CFY"\
+	-x env_CFT="$env_CFT"\
+	-x env_globH="$env_globH"\
+	-x env_overallConnectivity="$env_overallConnectivity"\
+	-x env_stencilDim="$env_stencilDim"\
+	-x env_synGen="$env_synGen"\
+	-x env_totalSimTime_ms="$env_totalSimTime_ms"\
+	-x env_D="$env_D"\
+	-x env_minSynWeight_f="$env_minSynWeight_f"\
+	-x env_moduloSec="$env_moduloSec"\
+	-x env_ratesSampling="$env_ratesSampling"\
+	-x env_chrono="$env_chrono"\
+	-x env_debugPrintEnable_ms="$env_debugPrintEnable_ms"\
+	-x env_startStatFiles_s="$env_startStatFiles_s"\
+	-x env_stopStatFiles_s="$env_stopStatFiles_s"\
+	-x env_startPartialChrono_ms="$env_startPartialChrono_ms"\
+	-x env_partialChronoWindow_ms="$env_partialChronoWindow_ms"\
+	-x env_startPlasticity_ms="$env_startPlasticity_ms"\
+	-x env_stopPlasticity_ms="$env_stopPlasticity_ms"\
+	-x env_startModulations_ms="$env_startModulations_ms"\
+	-x env_stopModulations_ms="$env_stopModulations_ms"\
+	-x env_manageOutputFiles="$env_manageOutputFiles"\
+	-x env_howManyOutputFiles="$env_howManyOutputFiles"\
+	-x env_spikes_writeDisable="$env_spikes_writeDisable"\
+	-x env_statRatesPerPop_writeDisable="$env_statRatesPerPop_writeDisable"\
+	-x env_startRatesPerPop_s="$env_startRatesPerPop_s"\
+	-x env_stopRatesPerPop_s="$env_stopRatesPerPop_s"\
+	-x env_statSTDPevent_writeDisable="$env_statSTDPevent_writeDisable"\
+	-x env_startSTDPevent_s="$env_startSTDPevent_s"\
+	-x env_stopSTDPevent_s="$env_stopSTDPevent_s"\
+	-x env_statSynPeriodicProbe_writeDisable="$env_statSynPeriodicProbe_writeDisable"\
+	-x env_startSynPeriodicProbe_s="$env_startSynPeriodicProbe_s"\
+	-x env_stopSynPeriodicProbe_s="$env_stopSynPeriodicProbe_s"\
+	-x env_outputMessageTraffic="$env_outputMessageTraffic"\
+	-x env_globalSeed="$env_globalSeed"\
+	-x env_thalamicInputFreq="$env_thalamicInputFreq"\
+	-x env_collectivesAlgo="$env_collectivesAlgo"\
+	-x env_pktLength="$env_pktLength"\
+	$DPSNNexecutable >>log-H$env_globH-C$env_CFT.log \
+	 2>>time-H$env_globH-C$env_CFT.time
+set +x
+if [ "$env_manageOutputFiles" == "y" ] ; then
+echo "STOP MPIRUN - NOW STARTS THE MANAGEMENT OF OUTPUT FILES"
+
+echo "timing PARTIAL: init phase plus" $env_totalSimTime_ms "ms simulated time"\
+      >>time-H$env_globH-C$env_CFT.time
+date >> time-H$env_globH-C$env_CFT.time
+
+
+################### output short #################
+# Section for spikes and thalamicInput files management in short version (only 3 files: start, lastodd, lasteven)
+
+if [ $env_howManyOutputFiles == 0 ] ; then
+#=====================
+# Section for spikes files management in short version (only 3 files: start, lastodd, lasteven)
+
+   echo "Wait for spikesDPSNN.dat file..."
+   rm spikes-start-C$env_CFT-H$env_globH-noSort.dat 2> /dev/null
+   touch spikes-start-C$env_CFT-H$env_globH-noSort.dat
+   for pLoopIndex in $(ls -c1 spikes-start-C$env_CFT-H$env_globH-h*.dat); do
+       cat $pLoopIndex >>spikes-start-C$env_CFT-H$env_globH-noSort.dat
+   done
+   rm spikes-start-C$env_CFT-H$env_globH-h*.dat 2> /dev/null
+   if [ "$env_sortSynGenFiles" == "y" ]; then
+      sort spikes-start-C$env_CFT-H$env_globH-noSort.dat >\
+      spikes-start-C$env_CFT-H$env_globH-total.dat
+      rm spikes-start-C$env_CFT-H$env_globH-noSort.dat 2> /dev/null
+   fi
+
+   rm spikes-lasteven-C$env_CFT-H$env_globH-noSort.dat 2> /dev/null
+   touch spikes-lasteven-C$env_CFT-H$env_globH-noSort.dat
+   for pLoopIndex in $(ls spikes-lasteven-C$env_CFT-H$env_globH-h*.dat); do
+       cat $pLoopIndex >>spikes-lasteven-C$env_CFT-H$env_globH-noSort.dat
+   done
+   rm spikes-lasteven-C$env_CFT-H$env_globH-h*.dat 2> /dev/null
+   if [ "$env_sortSynGenFiles" == "y" ]; then
+      sort spikes-lasteven-C$env_CFT-H$env_globH-noSort.dat >\
+      spikes-lasteven-C$env_CFT-H$env_globH-total.dat
+      rm spikes-lasteven-C$env_CFT-H$env_globH-noSort.dat 2> /dev/null
+   fi
+
+   rm spikes-lastodd-C$env_CFT-H$env_globH-noSort.dat 2> /dev/null
+   touch spikes-lastodd-C$env_CFT-H$env_globH-noSort.dat
+   for pLoopIndex in $(ls spikes-lastodd-C$env_CFT-H$env_globH-h*.dat); do
+       cat $pLoopIndex >>spikes-lastodd-C$env_CFT-H$env_globH-noSort.dat
+   done
+   rm spikes-lastodd-C$env_CFT-H$env_globH-h*.dat 2> /dev/null
+   if [ "$env_sortSynGenFiles" == "y" ]; then
+      sort spikes-lastodd-C$env_CFT-H$env_globH-noSort.dat >\
+      spikes-lastodd-C$env_CFT-H$env_globH-total.dat
+      rm spikes-lastodd-C$env_CFT-H$env_globH-noSort.dat 2> /dev/null
+   fi
+   echo "...spikesDPSNN.dat file done"
+
+fi
+
+#################### output long ####################
+# Section for spikes  in long version (1 file for each second of simulation)
+
+if [ $env_howManyOutputFiles == 1 ] ; then
+
+   echo "Wait for spikesDPSNN.dat file..."
+   rm spikesDPSNN.dat 2> /dev/null
+   touch spikesDPSNN.dat
+   SEC=$env_startStatFiles_s
+   for numSpikeFiles in $(ls spikes-sec*-C$env_CFT-H$env_globH-h000.dat); do
+         rm spikes-sec$SEC-C$env_CFT-H$env_globH-noSort.dat 2> /dev/null
+         touch spikes-sec$SEC-C$env_CFT-H$env_globH-noSort.dat
+         for pLoopIndex in $(ls spikes-sec$SEC-C$env_CFT-H$env_globH-h*.dat); do
+             cat $pLoopIndex >>spikes-sec$SEC-C$env_CFT-H$env_globH-noSort.dat
+         done
+         rm spikes-sec$SEC-C$env_CFT-H$env_globH-h*.dat 2> /dev/null
+         cat spikes-sec$SEC-C$env_CFT-H$env_globH-noSort.dat >> spikesDPSNN.dat
+	 rm spikes-sec$SEC-C$env_CFT-H$env_globH-h*.dat
+         ((SEC++))
+   done
+   echo "...spikesDPSNN.dat file done"
+fi
+#################### output long/short end ####################
+
+if [ "$env_ratesPerPopFiles" == 1 ] ; then
+
+   echo "Wait for ratesPerPopDPSNN.dat file..."
+   rm ratesPerPopDPSNN.dat 2> /dev/null
+   touch ratesPerPopDPSNN.dat
+   SEC=$env_startStatFiles_s
+   for numRatesFiles in $(ls ratesPerPop-sec*-C$env_CFT-H$env_globH-h000.dat); do
+       rm ratesPerPop-sec$SEC-C$env_CFT-H$env_globH-noSort.dat 2> /dev/null
+       touch ratesPerPop-sec$SEC-C$env_CFT-H$env_globH-noSort.dat
+       cat ratesPerPop-sec$SEC-C$env_CFT-H$env_globH-h000.dat > ratesPerPop-sec$SEC-C$env_CFT-H$env_globH-noSort.dat
+       rm ratesPerPop-sec$SEC-C$env_CFT-H$env_globH-h000.dat
+       for pLoopIndex in $(ls ratesPerPop-sec$SEC-C$env_CFT-H$env_globH-h*.dat 2> /dev/null); do
+           cp ratesPerPop-sec$SEC-C$env_CFT-H$env_globH-noSort.dat ratesPerPop.tmp
+           join ratesPerPop.tmp $pLoopIndex > ratesPerPop-sec$SEC-C$env_CFT-H$env_globH-noSort.dat
+       done
+       rm ratesPerPop-sec$SEC-C$env_CFT-H$env_globH-h*.dat 2> /dev/null
+       cat ratesPerPop-sec$SEC-C$env_CFT-H$env_globH-noSort.dat >> ratesPerPopDPSNN.dat
+       rm ratesPerPop-sec$SEC-C$env_CFT-H$env_globH-noSort.dat
+      ((SEC++))
+   done
+   rm ratesPerPop.tmp 2> /dev/null
+   echo "...ratesPerPopDPSNN.dat file done"
+
+fi
+
+#################### manage output messageTraffic ####################
+
+if [ "$env_outputMessageTraffic" == "y" ] ; then
+
+   echo "Wait for messageTrafficDPSNN.dat file..."
+   rm messageTrafficDPSNN.dat 2> /dev/null
+   touch messageTrafficDPSNN.dat
+   SEC=0
+   for numFiles in $(ls messageTraffic-sec*-C$env_CFT-H$env_globH-h000.dat); do
+       rm messageTraffic-sec$SEC-C$env_CFT-H$env_globH-noSort.dat 2> /dev/null
+       touch messageTraffic-sec$SEC-C$env_CFT-H$env_globH-noSort.dat
+       cat messageTraffic-sec$SEC-C$env_CFT-H$env_globH-h000.dat > messageTraffic-sec$SEC-C$env_CFT-H$env_globH-noSort.dat
+       rm messageTraffic-sec$SEC-C$env_CFT-H$env_globH-h000.dat
+       for pLoopIndex in $(ls messageTraffic-sec$SEC-C$env_CFT-H$env_globH-h*.dat 2> /dev/null); do
+           cp messageTraffic-sec$SEC-C$env_CFT-H$env_globH-noSort.dat messageTraffic.tmp
+           join messageTraffic.tmp $pLoopIndex > messageTraffic-sec$SEC-C$env_CFT-H$env_globH-noSort.dat
+       done
+       rm messageTraffic-sec$SEC-C$env_CFT-H$env_globH-h*.dat 2> /dev/null
+       cat messageTraffic-sec$SEC-C$env_CFT-H$env_globH-noSort.dat >> messageTrafficDPSNN.dat
+      ((SEC++))
+   done
+   rm messageTraffic.tmp 2> /dev/null
+   echo "...messageTrafficDPSNN.dat file done"
+
+fi
+
+else
+echo "STOP MPIRUN - NO MANAGEMENT OF OUTPUT FILES"
+fi
+
+echo "timing STOP: completed FILE management:" >> time-H$env_globH-C$env_CFT.time
+date >> time-H$env_globH-C$env_CFT.time
+
+cat time-H$env_globH-C$env_CFT.time >> log-H$env_globH-C$env_CFT.log
+cat log-H$env_globH-C$env_CFT.log
+echo "the log file is: " log-H$env_globH-C$env_CFT.log
+
+rm stat-H$env_globH-C$env_CFT.stat 2> /dev/null
+touch stat-H$env_globH-C$env_CFT.stat
+
+for ((h=0;h<$env_globH;h++)); do
+    cat SummaryStatMeasures_h$h.stat >> stat-H$env_globH-C$env_CFT.stat 2> /dev/null
+    cat FiringsInChronoWindow_h$h.stat >> stat-H$env_globH-C$env_CFT.stat 2> /dev/null
+done
+
+rm SummaryStatMeasures_h*.stat 2> /dev/null
+rm  FiringsInChronoWindow_h*.stat 2> /dev/null
+
+
