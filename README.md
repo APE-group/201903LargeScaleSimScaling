@@ -10,7 +10,7 @@ The simulations of different dynamical brain states constitute a challenge for p
 
 We explored networks up to 192×192 modules, each composed of 1,250 integrate-and-fire neurons with spike-frequency adaptation, and exponentially decaying inter-modular synaptic connectivity with varying spatial decay constant. For the largest networks the total number of simulated synapses was over 70 billion.
 
-# Content of the repository
+## Content of the repository
 
 The repository contains code and models used to run large scale simulation of spiking Neural Networks supporting a range of dynamic states, from synchronous slow wave activity (SWA), characteristic of deep sleep or anesthesia, to fluctuating, asynchronous activity during wakefulness (AW).
 Scaling analyses have been performed on the proprietary mixed time and event driven DPSNN simulation engine (Distributed Simulator of Plastic Spiking Neural Networks), for both SW and AW configurations, also varying connectivity parameters from shorter to longer range, as well as varying the mean firing rate of network activity. This implies the evaluation of simulation performance and robustness under different loads of local computation and communication. Distributed simulations have been also executed on the NEST platform, for comparison and validation.
