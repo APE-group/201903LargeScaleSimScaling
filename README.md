@@ -1,6 +1,6 @@
 # Scaling of a large-scale simulation of synchronous slow-wave and asynchronous awake-like activity of a cortical model with long-range interconnections
 
-Reference: Pastorelli E, Capone C, Simula F, Sanchez-Vives MV, Del Giudice P, Mattia M and Paolucci PS (2019) Scaling of a Large-Scale Simulation of Synchronous Slow-Wave and Asynchronous Awake-Like Activity of a Cortical Model With Long-Range Interconnections. Front. Syst. Neurosci. 13:33. doi: 10.3389/fnsys.2019.00033
+Reference: Pastorelli E, Capone C, Simula F, Sanchez-Vives MV, Del Giudice P, Mattia M and Paolucci PS (2019) Scaling of a Large-Scale Simulation of Synchronous Slow-Wave and Asynchronous Awake-Like Activity of a Cortical Model With Long-Range Interconnections. Front. Syst. Neurosci. 13:33. [doi: 10.3389/fnsys.2019.00033](https://www.frontiersin.org/articles/10.3389/fnsys.2019.00033/full)
 
 Large-scale cortical model (several square centimeters of cortex) at biological neural and synaptic densities able to express both slow-waves and asynchronous awake states. The model is based on a bi-dimensional grid of neural populations, interconnected by long-range synaptic connectivity, which reflects the modular organization of the cortex.
 
