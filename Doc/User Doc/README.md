@@ -1,11 +1,11 @@
 
-# DPSNN simulation engine
+# DPSNN simulations
 
-## Build
+## How to build the simulation engine
 The building environment needs an MPI-compliant C/C++ compiler.
 To build the executable, invoke 'make'.
 
-## Simulate
+## How to simulate the given models
 Prepare in the same folder the DPSNN executable and the DPSNN configuration files for the specific model to be simulated.
 To run simulations, invoke:
 
