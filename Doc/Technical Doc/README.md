@@ -1,4 +1,4 @@
-# Thecnical references
+# Technical references
 
 
 For the description of the DPSNN simulator and of the model reader can refer to the paper:
